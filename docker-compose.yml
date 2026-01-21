@@ -1,0 +1,50 @@
+services:
+  postgres:
+    container_name: pope-ride-survey-db
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-pope_ride_survey}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pope-ride-survey-network
+  app:
+    container_name: pope-ride-survey
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pope-ride-survey:latest
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT}:3000"
+      - "${PRISMA_STUDIO_PORT-5555}:5555"
+    environment:
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_MESSAGING_SERVICE_SID=${TWILIO_MESSAGING_SERVICE_SID}
+      - APP_URL=${APP_URL}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-5555}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      
+    networks:
+      - popride-network
+
+volumes:
+  postgres_data:
+
+networks:
+  popride-network:
+    external: true
